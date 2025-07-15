@@ -884,14 +884,17 @@ void *visit(function_invocation_c *symbol) {
           param_value = type_initial_value_c::get(current_param_type);
         }
         if (param_value == NULL) ERROR;
-        s4o.print("(");
-        if      (get_datatype_info_c::is_ANY_INT_literal(current_param_type))
-          get_datatype_info_c::lint_type_name.accept(*this);
-        else if (get_datatype_info_c::is_ANY_REAL_literal(current_param_type))
-          get_datatype_info_c::lreal_type_name.accept(*this);
-        else
-          current_param_type->accept(*this);
-        s4o.print(")");
+        /* Hack for array. For some reason, parameter is cast to (void*) instead of to __ARRAY_OF_<TYPE>_<N> */
+        if(!get_datatype_info_c::is_array(current_param_type)) {
+          s4o.print("(");
+          if      (get_datatype_info_c::is_ANY_INT_literal(current_param_type))
+            get_datatype_info_c::lint_type_name.accept(*this);
+          else if (get_datatype_info_c::is_ANY_REAL_literal(current_param_type))
+            get_datatype_info_c::lreal_type_name.accept(*this);
+          else
+            current_param_type->accept(*this);
+          s4o.print(")");
+        }
         print_check_function(current_param_type, param_value);
         nb_param++;
         break;
