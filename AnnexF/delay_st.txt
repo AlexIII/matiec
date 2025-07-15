@@ -2,7 +2,7 @@ FUNCTION_BLOCK DELAY    (* N-sample delay *)
   VAR_INPUT
     RUN : BOOL ;     (* 1 = run, 0 = reset *)
     XIN : REAL ;
-    N   : INT        (* 0 <= N < 128 or manufacturer- *)
+    N   : INT ;      (* 0 <= N < 128 or manufacturer- *)
   END_VAR            (*      specified maximum value  *)
   VAR_OUTPUT XOUT : REAL; END_VAR   (* Delayed output *)
   VAR X : ARRAY [0..127]     (* N-Element queue *)
