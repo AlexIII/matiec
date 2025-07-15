@@ -137,9 +137,7 @@ typedef union __IL_DEFVAR_T {
 
 /* function that generates an IEC runtime error */
 static inline void __iec_error(void) {
-  /* TODO... */
-  fprintf(stderr, "IEC 61131-3 runtime error.\n");
-  /*exit(1);*/
+  exit(0x102);
 }
 
 
