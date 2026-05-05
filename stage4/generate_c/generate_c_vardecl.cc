@@ -2247,7 +2247,6 @@ void *visit(global_var_list_c *symbol) {
           }
           print_retain();
           s4o.print(")");
-          current_varqualifier = none_vq;
 #if 0
       /* The following code would be for globalinit_vf !!
        * But it is not currently required...
