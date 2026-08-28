@@ -20,6 +20,18 @@ $ make
 
 
 
+3) Cross-Compiling for Windows with Docker
+------------------------------------------
+Builds a static 32-bit iec2c.exe into ./dist-win/. Run from the matiec root.
+
+PowerShell : docker build -t matiec-mingw docker; docker run --rm -v "${PWD}:/src" -v "${PWD}/dist-win:/out" matiec-mingw
+Linux/macOS: docker build -t matiec-mingw docker && docker run --rm -v "$PWD:/src" -v "$PWD/dist-win:/out" matiec-mingw
+Git Bash   : as Linux, but prefix the 'docker run' with MSYS_NO_PATHCONV=1
+
+The image build is only needed once. Sources are copied into the container,
+so a native build in the same tree keeps its Makefile and object files.
+
+
 Maintaining the Build Environment
 =================================
 -> Add new files to Makefile.am or add a new makefile
