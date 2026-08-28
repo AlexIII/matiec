@@ -833,7 +833,10 @@ single_byte_char	(${hex_digit}{hex_digit})
  * which leaves us with the only choice of defining the
  * characters non-portably...
  */
-common_character_representation		[\x20\x21\x23\x25\x26\x28-\x7E]|{esc_char}
+/* Bytes 0x80-0xFF are accepted verbatim inside character strings and
+ * passed through unchanged; their encoding is not interpreted here.
+ */
+common_character_representation		[\x20\x21\x23\x25\x26\x28-\x7E\x80-\xFF]|{esc_char}
 double_byte_character_representation 	$\"|'|{double_byte_char}|{common_character_representation}
 single_byte_character_representation 	$'|\"|{single_byte_char}|{common_character_representation}
 
