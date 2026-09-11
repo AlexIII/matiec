@@ -28,14 +28,13 @@ else
     fail "retain_shared_global" "iec2c failed to compile (see $d/log)"
 fi
 
-# 2. struct initializer must bind to the named member, not the first alphabetical match (c1df93e)
+# 2. struct initializer must bind to the named member, not the first alphabetical match (c1df93e).
+#    Fields are deliberately incompatible types (STRING vs INT): with the bug, "a := 5" gets
+#    checked against b's type and fails with a false datatype error. See the .st for why same-typed
+#    fields would prove nothing here.
 d="$out/struct_initializer_member_order"; mkdir -p "$d"
-if "$IEC2C" -I "$LIB" -T "$d" struct_initializer_member_order.st > "$d/log" 2>&1; then
-    if grep -q 'MY_STRUCT temp = {7,5}' "$d/POUS.c"; then pass "struct_initializer_member_order"
-    else fail "struct_initializer_member_order" "expected 'MY_STRUCT temp = {7,5}' (b=7, a=5) in $d/POUS.c"; fi
-else
-    fail "struct_initializer_member_order" "iec2c failed to compile (see $d/log)"
-fi
+if "$IEC2C" -I "$LIB" -T "$d" struct_initializer_member_order.st > "$d/log" 2>&1; then pass "struct_initializer_member_order"
+else fail "struct_initializer_member_order" "iec2c failed to compile -- likely the find_element bug (see $d/log)"; fi
 
 # 3. enum value referenced (not declared) inside a struct initializer must not crash (f7185c6)
 d="$out/enum_in_struct_initializer"; mkdir -p "$d"

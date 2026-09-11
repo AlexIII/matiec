@@ -6,19 +6,27 @@
  * "b" is declared before "a" here specifically to trigger the bug: looking up
  * "a" would incorrectly stop at "b" (the first element, which sorts after "a").
  *
- * Expect: generated C initializes the struct as {7,5} (b=7, a=5), matching the
- * ST initializer (a := 5, b := 7) -- not both fields getting the same value.
+ * IMPORTANT: this lookup is used for datatype-compatibility checking of the
+ * initializer value, not for choosing which field the value is written to in
+ * codegen (that goes through structure_element_name directly, unaffected by
+ * this bug) -- a fixture with same-typed fields will compile "correctly" by
+ * accident both with and without the fix, and prove nothing. b and a are
+ * given deliberately incompatible types (STRING vs INT) so the bug produces
+ * an observable false "incompatible datatype" error: with the bug, "a := 5"
+ * gets checked against b's type (STRING) instead of a's (INT).
+ *
+ * Expect: clean compile, exit 0 (before the fix: a false datatype error).
  *)
 TYPE
   my_struct : STRUCT
-    b : INT;
+    b : STRING;
     a : INT;
   END_STRUCT;
 END_TYPE
 
 PROGRAM prog0
   VAR
-    s : my_struct := (a := 5, b := 7);
+    s : my_struct := (a := 5, b := 'hi');
   END_VAR
   s.a := s.a;
 END_PROGRAM
