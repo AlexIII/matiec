@@ -159,6 +159,11 @@ void *type_initial_value_c::visit(lword_type_name_c *symbol)        {return (voi
 void *type_initial_value_c::visit(string_type_name_c *symbol)       {return (void *)string_0;}
 void *type_initial_value_c::visit(wstring_type_name_c *symbol)      {return (void *)wstring_0;}
 
+/* A bounded STRING's initial value is the empty string, exactly as a plain STRING's is;
+ * the declared width types the storage, not the value.
+ */
+void *type_initial_value_c::visit(single_byte_limited_len_string_spec_c *symbol) {return (void *)string_0;}
+
 void *type_initial_value_c::visit(safetime_type_name_c *symbol)     {return (void *)time_0;}
 void *type_initial_value_c::visit(safebool_type_name_c *symbol)     {return (void *)bool_0;}
 void *type_initial_value_c::visit(safesint_type_name_c *symbol)     {return (void *)integer_0;}

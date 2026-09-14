@@ -1,0 +1,14 @@
+PROGRAM prog0
+  VAR
+    A : STRING;
+    B : STRING := 'hello';
+  END_VAR
+  A := B;
+END_PROGRAM
+
+CONFIGURATION config
+  RESOURCE res ON PLC
+    TASK tsk(INTERVAL := T#100ms, PRIORITY := 0);
+    PROGRAM inst0 WITH tsk : prog0;
+  END_RESOURCE
+END_CONFIGURATION

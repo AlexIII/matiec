@@ -253,6 +253,11 @@ class search_base_type_c: public null_visitor_c {
   */
     void *visit(string_type_declaration_c *symbol);
 
+  /*  STRING '[' integer ']' [ASSIGN single_byte_character_string] */
+    void *visit(single_byte_string_spec_c *symbol);
+  /*  STRING '[' integer ']' */
+    void *visit(single_byte_limited_len_string_spec_c *symbol);
+
   /* function_block_type_name ASSIGN structure_initialization */
   /* structure_initialization -> may be NULL ! */
     void *visit(fb_spec_init_c *symbol);

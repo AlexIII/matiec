@@ -3231,6 +3231,8 @@ structure_element_declaration:
 	    yynerrs++;
 	  }
 	}
+| structure_element_name ':' single_byte_string_spec
+	{$$ = new structure_element_declaration_c($1, $3, locloc(@$)); $$->token = $1->token;}
 /* ERROR_CHECK_BEGIN */
 | structure_element_name simple_spec_init
 	{$$ = NULL; print_err_msg(locl(@1), locf(@2), "':' missing between structure element name and simple specification."); yynerrs++;}
@@ -3242,6 +3244,8 @@ structure_element_declaration:
 	{$$ = NULL; print_err_msg(locl(@1), locf(@2), "':' missing between structure element name and array specification."); yynerrs++;}
 | structure_element_name initialized_structure
 	{$$ = NULL; print_err_msg(locl(@1), locf(@2), "':' missing between structure element name and structure specification."); yynerrs++;}
+| structure_element_name single_byte_string_spec
+	{$$ = NULL; print_err_msg(locl(@1), locf(@2), "':' missing between structure element name and string specification."); yynerrs++;}
 | structure_element_name ':' error
 	{$$ = NULL;
 	 if (is_current_syntax_token()) {print_err_msg(locl(@2), locf(@3), "no specification defined in structure element declaration.");}

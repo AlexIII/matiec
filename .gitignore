@@ -13,4 +13,6 @@ autom4te.cache/*
 config/*
 stage1_2/*.cc
 stage1_2/*.hh
+dist-win/
 tests/upstream_fixes/out/
+tests/string_widths/out/

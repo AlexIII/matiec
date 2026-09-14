@@ -84,6 +84,11 @@ class generate_c_st_c: public generate_c_base_and_typeid_c {
 
     variablegeneration_t wanted_variablegeneration;
 
+    /* Set while emitting an assignment's left hand side inside a FUNCTION, where the
+     * raw lvalue is wanted rather than the widened value of a bounded STRING.
+     */
+    bool suppress_string_widen;
+
   public:
     generate_c_st_c(stage4out_c *s4o_ptr, symbol_c *name, symbol_c *scope, const char *variable_prefix = NULL)
     : generate_c_base_and_typeid_c(s4o_ptr) {
@@ -98,6 +103,7 @@ class generate_c_st_c: public generate_c_base_and_typeid_c {
       fcall_number = 0;
       fbname = name;
       wanted_variablegeneration = expression_vg;
+      suppress_string_widen = false;
     }
 
     virtual ~generate_c_st_c(void) {
@@ -119,8 +125,40 @@ class generate_c_st_c: public generate_c_base_and_typeid_c {
 
 
 
+/* Declared width of the STRING a variable reference resolves to, 0 if it is not
+ * a bounded string. get_type_id() hands back the declaration itself, which for
+ * MY_STR : STRING[20] is the STRING[20] specification.
+ */
+int string_bound_of_var(symbol_c *symbol) {
+  if (!get_datatype_info_c::is_ANY_STRING(symbol->datatype)) return 0;
+  return string_bound_of(search_varfb_instance_type->get_type_id(symbol));
+}
+
+
+/* The same, for a parameter of a function block instance: the parameter is
+ * declared in the FB type, not in the scope holding the instance.
+ */
+int string_bound_of_fb_param(symbol_c *fb_instance, symbol_c *param_name) {
+  symbol_c *fb_type = search_fb_instance_decl->get_type_name(fb_instance);
+  if (NULL == fb_type) return 0;
+  function_block_type_symtable_t::iterator iter = function_block_type_symtable.find(fb_type);
+  if (iter == function_block_type_symtable.end()) return 0;
+  search_var_instance_decl_c search_decl(iter->second);
+  return string_bound_of(search_decl.get_decl(param_name));
+}
+
+
 void *print_getter(symbol_c *symbol) {
   unsigned int vartype = analyse_variable_c::first_nonfb_vardecltype(symbol, scope_);
+  int bound = string_bound_of_var(symbol);
+  if ((bound > 0) && (wanted_variablegeneration == fparam_output_vg))
+    STAGE4_ERROR(symbol, symbol, "a bounded STRING cannot be passed as an output or in-out parameter.");
+  if (bound > 0) {
+    /* the value leaves its narrow storage as a canonical STRING */
+    s4o.print("__string_widen_");
+    s4o.print(bound);
+    s4o.print("(");
+  }
   if (wanted_variablegeneration == fparam_output_vg) {
     if (vartype == search_var_instance_decl_c::external_vt) {
       if (!get_datatype_info_c::is_type_valid    (symbol->datatype)) ERROR;
@@ -157,6 +195,7 @@ void *print_getter(symbol_c *symbol) {
   wanted_variablegeneration = complextype_suffix_vg;
   symbol->accept(*this);
   s4o.print(")");
+  if (bound > 0) s4o.print(")");
   wanted_variablegeneration = old_wanted_variablegeneration;
   return NULL;
 }
@@ -170,6 +209,8 @@ void *print_setter(symbol_c* symbol,
         symbol_c* fb_value = NULL) {
  
   unsigned int vartype;
+  int bound = (fb_symbol == NULL)? string_bound_of_var(symbol)
+                                : string_bound_of_fb_param(fb_symbol, symbol);
   if (fb_symbol == NULL) {
     vartype = analyse_variable_c::first_nonfb_vardecltype(symbol, scope_);
     symbol_c *first_nonfb = analyse_variable_c::find_first_nonfb(symbol);
@@ -178,18 +219,28 @@ void *print_setter(symbol_c* symbol,
       if (!get_datatype_info_c::is_type_valid    (first_nonfb->datatype)) ERROR;
       if ( get_datatype_info_c::is_function_block(first_nonfb->datatype)) // handle situation where we are copying a complete fb -> fb1.fb2.fb3 := fb4 (and fb3 is external!)
         s4o.print(SET_EXTERNAL_FB);
-      else
+      else {
+        if (bound > 0) STAGE4_ERROR(symbol, symbol, "a bounded STRING is not supported for an external variable.");
         s4o.print(SET_EXTERNAL);
+      }
     }
-    else if (vartype == search_var_instance_decl_c::located_vt)
+    else if (vartype == search_var_instance_decl_c::located_vt) {
+      if (bound > 0) STAGE4_ERROR(symbol, symbol, "a bounded STRING is not supported for a located variable.");
       s4o.print(SET_LOCATED);
+    }
+    else if (bound > 0)
+      s4o.print(SET_STRVAR);
     else
       s4o.print(SET_VAR);
   }
   else {
     vartype = search_var_instance_decl->get_vartype(fb_symbol);
-    if (vartype == search_var_instance_decl_c::external_vt)
+    if (vartype == search_var_instance_decl_c::external_vt) {
+      if (bound > 0) STAGE4_ERROR(symbol, symbol, "a bounded STRING is not supported for an external function block.");
       s4o.print(SET_EXTERNAL_FB);
+    }
+    else if (bound > 0)
+      s4o.print(SET_STRVAR);
     else
       s4o.print(SET_VAR);
   }
@@ -223,6 +274,7 @@ void *print_setter(symbol_c* symbol,
     s4o.print(",");
   }
   wanted_variablegeneration = expression_vg;
+  if (bound > 0) {s4o.print(bound); s4o.print(",");}
   print_check_function(type, value, fb_value);
   s4o.print(")");
   wanted_variablegeneration = expression_vg;
@@ -264,12 +316,20 @@ void *visit(symbolic_variable_c *symbol) {
     default:
       if (this->is_variable_prefix_null()) {
         if (wanted_variablegeneration == fparam_output_vg) {
+          if (string_bound_of_var(symbol) > 0)
+            STAGE4_ERROR(symbol, symbol, "a bounded STRING cannot be passed as an output or in-out parameter.");
           s4o.print("&(");
           generate_c_base_c::visit(symbol);
           s4o.print(")");
         }
         else {
+          /* A FUNCTION's variables are plain C objects, so the accessor macros that
+           * normally carry this conversion do not apply here.
+           */
+          int bound = suppress_string_widen? 0 : string_bound_of_var(symbol);
+          if (bound > 0) {s4o.print("__string_widen_"); s4o.print(bound); s4o.print("(");}
           generate_c_base_c::visit(symbol);
+          if (bound > 0) s4o.print(")");
         }
       }
       else
@@ -369,9 +429,12 @@ void *visit(structured_variable_c *symbol) {
 	 *  
 	 * please read the comment in visit(deref_operator_c *) for more information!
          */
+        int bound = suppress_string_widen? 0 : string_bound_of_var(symbol);
+        if (bound > 0) {s4o.print("__string_widen_"); s4o.print(bound); s4o.print("(");}
         symbol->record_variable->accept(*this);
         s4o.print(".");
         symbol->field_selector->accept(*this);
+        if (bound > 0) s4o.print(")");
       }
       else
         print_getter(symbol);
@@ -952,9 +1015,26 @@ void *visit(assignment_statement_c *symbol) {
   symbol_c *left_type = symbol->l_exp->datatype;
   
   if (this->is_variable_prefix_null()) {
-    symbol->l_exp->accept(*this);
-    s4o.print(" = ");
-    print_check_function(left_type, symbol->r_exp);
+    /* __SET_STRVAR() reaches through the accessor macros, which a FUNCTION's plain
+     * variables do not have, so narrow through the helper directly.
+     */
+    int bound = string_bound_of_var(symbol->l_exp);
+    if (bound > 0) {
+      s4o.print("__string_narrow_");
+      s4o.print(bound);
+      s4o.print("(&");
+      suppress_string_widen = true;
+      symbol->l_exp->accept(*this);
+      suppress_string_widen = false;
+      s4o.print(", ");
+      print_check_function(left_type, symbol->r_exp);
+      s4o.print(")");
+    }
+    else {
+      symbol->l_exp->accept(*this);
+      s4o.print(" = ");
+      print_check_function(left_type, symbol->r_exp);
+    }
   }
   else {
     print_setter(symbol->l_exp, left_type, symbol->r_exp);

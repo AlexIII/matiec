@@ -1,0 +1,21 @@
+FUNCTION_BLOCK FB1
+  VAR_OUTPUT
+    O : STRING;
+  END_VAR
+  O := 'abcdefghijklmno';
+END_FUNCTION_BLOCK
+
+PROGRAM prog0
+  VAR
+    F : FB1;
+    N : STRING[10];
+  END_VAR
+  F(O => N);
+END_PROGRAM
+
+CONFIGURATION config
+  RESOURCE res ON PLC
+    TASK tsk(INTERVAL := T#100ms, PRIORITY := 0);
+    PROGRAM inst0 WITH tsk : prog0;
+  END_RESOURCE
+END_CONFIGURATION

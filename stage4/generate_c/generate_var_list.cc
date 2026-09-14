@@ -811,6 +811,23 @@ class generate_var_list_c: protected generate_c_base_and_typeid_c {
       return NULL;
     }
 
+    /*  var1_list ':' single_byte_string_spec */
+    void *visit(single_byte_string_var_declaration_c *symbol) {
+      TRACE("single_byte_string_var_declaration_c");
+
+      /* The base type is the STRING it is; the detail column carries the declared
+       * width, which is the only place storage size survives into VARIABLES.csv.
+       */
+      update_var_type_symbol(&get_datatype_info_c::string_type_name);
+      this->current_var_type_name = symbol->single_byte_string_spec;
+
+      declare_variables(symbol->var1_list);
+
+      reset_var_type_symbol();
+
+      return NULL;
+    }
+
     void *visit(en_param_declaration_c *symbol) {
       TRACE("en_param_declaration_c");
 

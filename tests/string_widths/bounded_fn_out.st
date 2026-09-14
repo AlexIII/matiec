@@ -1,0 +1,25 @@
+FUNCTION FN1 : INT
+  VAR_INPUT
+    I : INT;
+  END_VAR
+  VAR_OUTPUT
+    O : STRING;
+  END_VAR
+  O := 'abcdefghijklmno';
+  FN1 := I;
+END_FUNCTION
+
+PROGRAM prog0
+  VAR
+    N : STRING[10];
+    R : INT;
+  END_VAR
+  R := FN1(I := 1, O => N);
+END_PROGRAM
+
+CONFIGURATION config
+  RESOURCE res ON PLC
+    TASK tsk(INTERVAL := T#100ms, PRIORITY := 0);
+    PROGRAM inst0 WITH tsk : prog0;
+  END_RESOURCE
+END_CONFIGURATION

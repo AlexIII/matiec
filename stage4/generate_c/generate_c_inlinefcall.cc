@@ -224,8 +224,22 @@ class generate_c_inlinefcall_c: public generate_c_base_and_typeid_c {
 
 
 
+    /* Declared width of the STRING a variable reference resolves to, 0 if it is
+     * not a bounded string. See the same helper in generate_c_st.cc.
+     */
+    int string_bound_of_var(symbol_c *symbol) {
+      if (!get_datatype_info_c::is_ANY_STRING(symbol->datatype)) return 0;
+      return string_bound_of(search_varfb_instance_type->get_type_id(symbol));
+    }
+
     void *print_getter(symbol_c *symbol) {
       unsigned int vartype = search_var_instance_decl->get_vartype(symbol);
+      int bound = string_bound_of_var(symbol);
+      if (bound > 0) {
+        s4o.print("__string_widen_");
+        s4o.print(bound);
+        s4o.print("(");
+      }
       if (vartype == search_var_instance_decl_c::external_vt) {
         if (!get_datatype_info_c::is_type_valid    (symbol->datatype)) ERROR;
         if ( get_datatype_info_c::is_function_block(symbol->datatype))
@@ -245,6 +259,7 @@ class generate_c_inlinefcall_c: public generate_c_base_and_typeid_c {
       wanted_variablegeneration = complextype_suffix_vg;
       symbol->accept(*this);
       s4o.print(")");
+      if (bound > 0) s4o.print(")");
       wanted_variablegeneration = expression_vg;
       return NULL;
     }
@@ -253,15 +268,22 @@ class generate_c_inlinefcall_c: public generate_c_base_and_typeid_c {
                        symbol_c* type,
                        symbol_c* value) {
       unsigned int vartype = search_var_instance_decl->get_vartype(symbol);
+      int bound = string_bound_of_var(symbol);
       if (vartype == search_var_instance_decl_c::external_vt) {
         if (!get_datatype_info_c::is_type_valid    (symbol->datatype)) ERROR;
         if ( get_datatype_info_c::is_function_block(symbol->datatype))
           s4o.print(SET_EXTERNAL_FB);
-         else
+         else {
+          if (bound > 0) STAGE4_ERROR(symbol, symbol, "a bounded STRING is not supported for an external variable.");
           s4o.print(SET_EXTERNAL);
+        }
       }
-      else if (vartype == search_var_instance_decl_c::located_vt)
+      else if (vartype == search_var_instance_decl_c::located_vt) {
+        if (bound > 0) STAGE4_ERROR(symbol, symbol, "a bounded STRING is not supported for a located variable.");
         s4o.print(SET_LOCATED);
+      }
+      else if (bound > 0)
+        s4o.print(SET_STRVAR);
       else
         s4o.print(SET_VAR);
       s4o.print("(,");
@@ -274,6 +296,7 @@ class generate_c_inlinefcall_c: public generate_c_base_and_typeid_c {
       }
       s4o.print(",");
       wanted_variablegeneration = expression_vg;
+      if (bound > 0) {s4o.print(bound); s4o.print(",");}
       print_check_function(type, value, NULL, true);
       s4o.print(")");
       wanted_variablegeneration = expression_vg;

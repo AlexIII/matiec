@@ -633,6 +633,16 @@ void *function_param_iterator_c::visit(var1_init_decl_c *symbol) {
 }
 
 
+/*  var1_list ':' single_byte_string_spec */
+void *function_param_iterator_c::visit(single_byte_string_var_declaration_c *symbol) {
+  TRACE("single_byte_string_var_declaration_c");
+  current_param_default_value = spec_init_sperator_c::get_init(symbol->single_byte_string_spec);
+  current_param_type          = spec_init_sperator_c::get_spec(symbol->single_byte_string_spec);
+
+  return symbol->var1_list->accept(*this);
+}
+
+
 void *function_param_iterator_c::visit(var1_list_c *symbol) {
   TRACE("var1_list_c");
   return handle_param_list(symbol);

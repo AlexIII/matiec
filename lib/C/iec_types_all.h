@@ -126,6 +126,31 @@ typedef name type;\
 __DECLARE_COMPLEX_STRUCT(type)
 
 
+/* A STRING declared with an explicit width: STRING[n] in IEC, __STRING_n in C.
+ * Storage is n+1 bytes instead of the canonical STRING's STR_MAX_LEN+1.
+ * Values cross to and from the canonical STRING through the two functions
+ * below; narrowing truncates at the declared width.
+ */
+#define __DECLARE_STRING_TYPE(maxlen)\
+typedef struct {\
+  __strlen_t len;\
+  uint8_t body[maxlen];\
+} __STRING_##maxlen;\
+__DECLARE_COMPLEX_STRUCT(__STRING_##maxlen)\
+static inline STRING __string_widen_##maxlen(__STRING_##maxlen s) {\
+  STRING r;\
+  __strlen_t i;\
+  r.len = s.len;\
+  for (i = 0; i < s.len; i++) r.body[i] = s.body[i];\
+  return r;\
+}\
+static inline void __string_narrow_##maxlen(__STRING_##maxlen *d, STRING s) {\
+  __strlen_t i, n = (s.len > (maxlen)) ? (maxlen) : s.len;\
+  for (i = 0; i < n; i++) d->body[i] = s.body[i];\
+  d->len = n;\
+}
+
+
 /* Those typdefs clash with windows.h */
 /* i.e. this file cannot be included aside windows.h */
 __ANY(__DECLARE_IEC_TYPE)

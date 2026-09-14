@@ -513,9 +513,10 @@ class generate_c_structure_initialization_c: public generate_c_base_and_typeid_c
     symbol_c* structure_type_decl;
     symbol_c* current_element_type;
     symbol_c* current_element_default_value;
+    int current_string_bound;
 
   public:
-    generate_c_structure_initialization_c(stage4out_c *s4o_ptr): generate_c_base_and_typeid_c(s4o_ptr) {}
+    generate_c_structure_initialization_c(stage4out_c *s4o_ptr): generate_c_base_and_typeid_c(s4o_ptr) {current_string_bound = 0;}
     ~generate_c_structure_initialization_c(void) {}
 
     void init_structure_default(symbol_c *structure_type_name) {
@@ -664,10 +665,30 @@ class generate_c_structure_initialization_c: public generate_c_base_and_typeid_c
           delete structure_initialization;
         }
         else {
+          current_string_bound = string_bound_of(current_element_type);
           element_value->accept(*this);
+          current_string_bound = 0;
         }
       }
       s4o.print("}");
+      return NULL;
+    }
+
+    /* A bounded member's initial value must carry its own type: __STRING_LITERAL()
+     * is typed STRING, which does not assign to a narrower struct field.
+     */
+    void *visit(single_byte_character_string_c *symbol) {
+      if (0 == current_string_bound) return generate_c_base_c::visit(symbol);
+      std::string str;
+      unsigned int count = decode_string_literal(symbol, str);
+      s4o.print(INITIAL_VALUE);
+      s4o.print("((__STRING_");
+      s4o.print(current_string_bound);
+      s4o.print("){");
+      s4o.print(count);
+      s4o.print(",");
+      s4o.print(str);
+      s4o.print("})");
       return NULL;
     }
     
@@ -907,8 +928,16 @@ class generate_c_vardecl_c: protected generate_c_base_and_typeid_c {
      */
     symbol_c *current_var_type_symbol;
     symbol_c *current_var_init_symbol;
+    /* declared width of the STRING[n] being declared, 0 when not one */
+    int current_string_bound;
     void update_type_init(symbol_c *symbol /* a spec_init_c, subrange_spec_init_c, etc... */ ) {
       this->current_var_type_symbol = spec_init_sperator_c::get_spec(symbol);
+      /* Bounded strings are declared by their own visitor below. Reaching here means
+       * the declaration is a global, external or located one, which the per-width
+       * accessor macros do not cover.
+       */
+      if (string_bound_of(this->current_var_type_symbol) > 0)
+        STAGE4_ERROR(symbol, symbol, "a bounded STRING is only supported for a variable declared inside a POU.");
       this->current_var_init_symbol = spec_init_sperator_c::get_init(symbol);
       if (NULL == this->current_var_type_symbol) ERROR;
       if (NULL == this->current_var_init_symbol) {
@@ -1189,6 +1218,7 @@ class generate_c_vardecl_c: protected generate_c_base_and_typeid_c {
       current_vartype  = none_vt;
       current_varqualifier = none_vq;
       current_var_type_symbol = NULL;
+      current_string_bound = 0;
       current_var_init_symbol = NULL;
       globalnamespace         = NULL;
       nv = NULL;
@@ -2412,6 +2442,49 @@ void *visit(var1_init_decl_c *symbol) {
 void *visit(var1_list_c *symbol) {
   TRACE("var1_list_c");
   declare_variables(symbol);
+  return NULL;
+}
+
+
+/*  var1_list ':' single_byte_string_spec */
+// SYM_REF2(single_byte_string_var_declaration_c, var1_list, single_byte_string_spec)
+void *visit(single_byte_string_var_declaration_c *symbol) {
+  TRACE("single_byte_string_var_declaration_c");
+  /* Unlike every other declaration handled here, the type is written in the
+   * declaration itself, so there is no spec_init to hand to update_type_init().
+   */
+  single_byte_string_spec_c *spec = dynamic_cast<single_byte_string_spec_c *>(symbol->single_byte_string_spec);
+  if (NULL == spec) ERROR;
+  current_string_bound = string_bound_of(spec);
+  if (current_string_bound <= 0) ERROR;
+  this->current_var_type_symbol = spec->string_spec;
+  this->current_var_init_symbol = spec->single_byte_character_string;
+  if (NULL == this->current_var_init_symbol)
+    this->current_var_init_symbol = type_initial_value_c::get(&get_datatype_info_c::string_type_name);
+
+  symbol->var1_list->accept(*this);
+
+  void_type_init();
+  current_string_bound = 0;
+  return NULL;
+}
+
+/* A bounded string's initial value must carry its own type: __STRING_LITERAL()
+ * is typed STRING, which does not assign to a narrower struct.
+ */
+void *visit(single_byte_character_string_c *symbol) {
+  if (0 == current_string_bound) return generate_c_base_c::visit(symbol);
+  std::string str;
+  unsigned int count = decode_string_literal(symbol, str);
+  /* the compound literal holds a comma, so it must not reach a macro argument bare */
+  s4o.print(INITIAL_VALUE);
+  s4o.print("((__STRING_");
+  s4o.print(current_string_bound);
+  s4o.print("){");
+  s4o.print(count);
+  s4o.print(",");
+  s4o.print(str);
+  s4o.print("})");
   return NULL;
 }
 

@@ -50,6 +50,8 @@
 #include <list>
 #include <string>
 #include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
 #include <strings.h>
 
 
@@ -650,6 +652,51 @@ void *print_datatypes_error_c::visit(structured_variable_c *symbol) {
 // SYM_REF1(location_c, direct_variable)
 void *print_datatypes_error_c::visit(location_c *symbol) {
 	symbol->direct_variable->accept(*this);
+	return NULL;
+}
+
+
+/*  var1_list ':' single_byte_string_spec */
+// SYM_REF2(single_byte_string_var_declaration_c, var1_list, single_byte_string_spec)
+void *print_datatypes_error_c::visit(single_byte_string_var_declaration_c *symbol) {
+	single_byte_string_spec_c *spec = dynamic_cast<single_byte_string_spec_c *>(symbol->single_byte_string_spec);
+	if (NULL == spec) ERROR;
+	if (NULL == spec->single_byte_character_string) return NULL;
+
+	single_byte_limited_len_string_spec_c *limit = dynamic_cast<single_byte_limited_len_string_spec_c *>(spec->string_spec);
+	token_c *bound   = (NULL == limit)? NULL : dynamic_cast<token_c *>(limit->character_string_len);
+	token_c *literal = dynamic_cast<token_c *>(spec->single_byte_character_string);
+	if ((NULL == bound) || (NULL == literal)) return NULL;
+
+	long declared = parse_bounded_string_width(bound);
+	int  length   = decode_string_literal(literal->value, NULL);
+	if (length > declared)
+		STAGE3_ERROR(0, spec->single_byte_character_string, spec->single_byte_character_string,
+		             "initial value is longer than the declared width of the string (%d > %ld).", length, declared);
+	return NULL;
+}
+
+
+/*  structure_element_name ':' spec_init */
+// SYM_REF2(structure_element_declaration_c, structure_element_name, spec_init)
+void *print_datatypes_error_c::visit(structure_element_declaration_c *symbol) {
+	/* Called for every struct element, so anything that is not a bounded string
+	 * with an initial value is simply not ours to check.
+	 */
+	single_byte_string_spec_c *spec = dynamic_cast<single_byte_string_spec_c *>(symbol->spec_init);
+	if (NULL == spec) return NULL;
+	if (NULL == spec->single_byte_character_string) return NULL;
+
+	single_byte_limited_len_string_spec_c *limit = dynamic_cast<single_byte_limited_len_string_spec_c *>(spec->string_spec);
+	token_c *bound   = (NULL == limit)? NULL : dynamic_cast<token_c *>(limit->character_string_len);
+	token_c *literal = dynamic_cast<token_c *>(spec->single_byte_character_string);
+	if ((NULL == bound) || (NULL == literal)) return NULL;
+
+	long declared = parse_bounded_string_width(bound);
+	int  length   = decode_string_literal(literal->value, NULL);
+	if (length > declared)
+		STAGE3_ERROR(0, spec->single_byte_character_string, spec->single_byte_character_string,
+		             "initial value is longer than the declared width of the string (%d > %ld).", length, declared);
 	return NULL;
 }
 

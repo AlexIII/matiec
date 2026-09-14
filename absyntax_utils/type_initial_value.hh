@@ -116,6 +116,9 @@ class type_initial_value_c : public null_visitor_c {
     void *visit(string_type_name_c *symbol);
     void *visit(wstring_type_name_c *symbol);
 
+    /* STRING '[' integer ']' */
+    void *visit(single_byte_limited_len_string_spec_c *symbol);
+
     void *visit(safetime_type_name_c *symbol);
     void *visit(safebool_type_name_c *symbol);
     void *visit(safesint_type_name_c *symbol);

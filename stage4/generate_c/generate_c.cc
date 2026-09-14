@@ -153,6 +153,7 @@
 #define SET_EXTERNAL "__SET_EXTERNAL"
 #define SET_EXTERNAL_FB "__SET_EXTERNAL_FB"
 #define SET_LOCATED "__SET_LOCATED"
+#define SET_STRVAR "__SET_STRVAR"
 
 /* Variable initial value symbol for accessor macros */
 #define INITIAL_VALUE "__INITIAL_VALUE"
@@ -229,6 +230,32 @@ int  stage4_parse_options(char *options) {return 0;}
 /***********************************************************************/
 /***********************************************************************/
 /***********************************************************************/
+
+#include <stdlib.h> /* for atoi() */
+
+/* Must match STR_MAX_LEN (lib/C/iec_types.h): __string_widen_<n>() copies into a canonical
+ * STRING's fixed-size body with no bound check of its own.
+ */
+#define STRING_BOUND_MAX_LEN 126
+
+/* Width of a bounded STRING specification (STRING[20] -> 20), 0 for anything else.
+ * The width is a storage attribute: stage 3 gives such a variable the plain STRING
+ * datatype, and only the C declaration and the copies in and out of it are narrower.
+ */
+static int string_bound_of(symbol_c *spec) {
+  if (NULL == spec) return 0;
+  single_byte_string_spec_c *s = dynamic_cast<single_byte_string_spec_c *>(spec);
+  if (NULL != s) spec = s->string_spec;
+  single_byte_limited_len_string_spec_c *l = dynamic_cast<single_byte_limited_len_string_spec_c *>(spec);
+  if (NULL == l) return 0;
+  token_c *len = dynamic_cast<token_c *>(l->character_string_len);
+  if (NULL == len) return 0;
+  long width = parse_bounded_string_width(len);
+  if ((width < 1) || (width > STRING_BOUND_MAX_LEN))
+    STAGE4_ERROR(l, l, "declared width of a bounded STRING must be between 1 and %d (got %ld).", STRING_BOUND_MAX_LEN, width);
+  return (int)width;
+}
+
 
 #include "generate_c_base.cc"
 #include "generate_c_typedecl.cc"
@@ -388,12 +415,15 @@ class print_function_parameter_data_types_c: public generate_c_base_and_typeid_c
       return NULL;
     }
 
-    /* currently we do not support data types defined in the declaration itself */
-    /* For now, sugest the user define a TYPE .. END_TYPE */
     /* Note that this class is used for fixed length strings...
      *   STRING [ 42 ]
      */
-    void *visit(single_byte_string_var_declaration_c *symbol) {return NULL;}
+    void *visit(single_byte_string_var_declaration_c *symbol) {
+      single_byte_string_spec_c *spec = dynamic_cast<single_byte_string_spec_c *>(symbol->single_byte_string_spec);
+      if (NULL == spec) ERROR;
+      print_list(symbol->var1_list, spec->string_spec);
+      return NULL;
+    }
 
     /* currently we do not support data types defined in the declaration itself */
     /* For now, sugest the user define a TYPE .. END_TYPE */

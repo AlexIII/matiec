@@ -187,6 +187,8 @@ class print_datatypes_error_c: public iterator_visitor_c {
     /******************************************/
     void *visit(location_c *symbol);
     void *visit(located_var_decl_c *symbol);
+    void *visit(single_byte_string_var_declaration_c *symbol);
+    void *visit(structure_element_declaration_c *symbol);
 
     /**************************************/
     /* B 1.5 - Program organization units */

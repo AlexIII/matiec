@@ -370,6 +370,12 @@ SYM_REF4(string_type_declaration_c,	string_type_name,
 */
 void *search_base_type_c::visit(string_type_declaration_c *symbol)            {return (void *)symbol;}
 
+/* A declared width is a storage attribute, not a datatype of its own:
+ * a STRING[n] is a STRING everywhere stage 3 compares datatypes.
+ */
+void *search_base_type_c::visit(single_byte_string_spec_c *symbol)            {return symbol->string_spec->accept(*this);}
+void *search_base_type_c::visit(single_byte_limited_len_string_spec_c *symbol){return symbol->string_type_name->accept(*this);}
+
 
 /*  function_block_type_name ASSIGN structure_initialization */
 /* structure_initialization -> may be NULL ! */

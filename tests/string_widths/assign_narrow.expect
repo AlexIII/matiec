@@ -1,0 +1,2 @@
+__SET_STRVAR(data__->,NARROW,,10,__GET_VAR(data__->WIDE,))
+__string_widen_10(__GET_VAR(data__->NARROW,))

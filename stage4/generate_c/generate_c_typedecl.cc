@@ -269,6 +269,19 @@ class generate_c_typedecl_c: public generate_c_base_and_typeid_c {
       delete generate_c_typeid;
     }
 
+    /* A STRING[n] written inside a variable declaration: declare its C type,
+     * once per distinct width.
+     */
+    void declare_string_type(int bound) {
+      std::ostringstream os;
+      os << "__STRING_" << bound;
+      if (datatypes_already_defined.find(os.str()) != datatypes_already_defined.end()) return;
+      datatypes_already_defined[os.str()] = 1;
+      s4o_incl.print("__DECLARE_STRING_TYPE(");
+      s4o_incl.print(bound);
+      s4o_incl.print(")\n");
+    }
+
     typedef enum {
       none_td,
       enumerated_td,
@@ -1126,6 +1139,17 @@ class generate_c_implicit_typedecl_c: public iterator_visitor_c {
     /*  var1_list ':' initialized_structure */
     // SYM_REF2(structured_var_init_decl_c, var1_list, initialized_structure)
     void *visit(structured_var_init_decl_c   *symbol) {return NULL;}
+
+    /* STRING '[' integer ']' [ASSIGN single_byte_character_string] */
+    void *visit(single_byte_string_spec_c *symbol) {return symbol->string_spec->accept(*this);}
+
+    /* STRING '[' integer ']' */
+    void *visit(single_byte_limited_len_string_spec_c *symbol) {
+      int bound = string_bound_of(symbol);
+      if (bound <= 0) ERROR;
+      generate_c_typedecl_->declare_string_type(bound);
+      return NULL;
+    }
 
     /* fb_name_list ':' function_block_type_name ASSIGN structure_initialization */
     /* structure_initialization -> may be NULL ! */

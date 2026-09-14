@@ -101,6 +101,8 @@ extern  type_symtable_t type_symtable;
 #include "get_var_name.hh"
 #include "get_datatype_info.hh"
 #include "debug_ast.hh"
+#include "parse_bounded_string_width.hh"
+#include "decode_string_literal.hh"
 
 /***********************************************************************/
 /***********************************************************************/

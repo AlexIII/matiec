@@ -132,5 +132,7 @@
 	__SET_VAR(prefix, name, suffix, new_value)
 #define __SET_LOCATED(prefix, name, suffix, new_value)\
 	if (!(prefix name.flags & __IEC_FORCE_FLAG)) (*(prefix name.value)) suffix = new_value
+#define __SET_STRVAR(prefix, name, suffix, w, new_value)\
+	if (!(prefix name.flags & __IEC_FORCE_FLAG)) __string_narrow_##w(&(prefix name.value suffix), new_value)
 
 #endif //__ACCESSOR_H

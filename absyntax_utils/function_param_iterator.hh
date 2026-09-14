@@ -306,6 +306,7 @@ SYM_TOKEN(incompl_location_c)
 
 
     void *visit(var1_init_decl_c *symbol);
+    void *visit(single_byte_string_var_declaration_c *symbol);
     void *visit(var1_list_c *symbol);
     void *visit(var_init_decl_list_c *symbol);
 

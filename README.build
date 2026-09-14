@@ -31,6 +31,16 @@ Git Bash   : as Linux, but prefix the 'docker run' with MSYS_NO_PATHCONV=1
 The image build is only needed once. Sources are copied into the container,
 so a native build in the same tree keeps its Makefile and object files.
 
+4) Native Linux build with Docker (fast iteration)
+--------------------------------------------------
+Builds ./iec2c in place, in the same image as (3). Run from the matiec root.
+
+PowerShell : docker run --rm -v "${PWD}:/src" -w /src --entrypoint sh matiec-mingw /src/docker/build-native.sh
+Git Bash   : MSYS_NO_PATHCONV=1 docker run --rm -v "$(pwd -W):/src" -w /src --entrypoint sh matiec-mingw /src/docker/build-native.sh
+
+The bounded-string fixtures are run the same way:
+  ... --entrypoint sh matiec-mingw /src/tests/string_widths/run.sh
+
 
 Maintaining the Build Environment
 =================================

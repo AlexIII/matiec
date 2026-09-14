@@ -350,7 +350,27 @@ class generate_c_il_c: public generate_c_base_and_typeid_c, il_default_variable_
     }
 
 
+    /* 0 if symbol isn't a bounded STRING. IL has no widen/narrow conversions, so any
+     * bounded STRING found here is rejected outright below, not miscompiled.
+     */
+    int string_bound_of_var(symbol_c *symbol) {
+      if (!get_datatype_info_c::is_ANY_STRING(symbol->datatype)) return 0;
+      return string_bound_of(search_varfb_instance_type->get_type_id(symbol));
+    }
+
+    /* Same, for an FB instance parameter (CAL/CALC/CALCN). */
+    int string_bound_of_fb_param(symbol_c *fb_instance, symbol_c *param_name) {
+      symbol_c *fb_type = search_fb_instance_decl->get_type_name(fb_instance);
+      if (NULL == fb_type) return 0;
+      function_block_type_symtable_t::iterator iter = function_block_type_symtable.find(fb_type);
+      if (iter == function_block_type_symtable.end()) return 0;
+      search_var_instance_decl_c search_decl(iter->second);
+      return string_bound_of(search_decl.get_decl(param_name));
+    }
+
     void *print_getter(symbol_c *symbol) {
+      if (string_bound_of_var(symbol) > 0)
+        STAGE4_ERROR(symbol, symbol, "a bounded STRING is not supported in IL.");
       unsigned int vartype = search_var_instance_decl->get_vartype(symbol);
       if (wanted_variablegeneration == fparam_output_vg) {
         if (vartype == search_var_instance_decl_c::external_vt) {
@@ -397,6 +417,11 @@ class generate_c_il_c: public generate_c_base_and_typeid_c, il_default_variable_
             symbol_c* fb_symbol = NULL,
             symbol_c* fb_value = NULL,
             bool negative = false) {
+
+      int bound = (fb_symbol == NULL)? string_bound_of_var(symbol)
+                                      : string_bound_of_fb_param(fb_symbol, symbol);
+      if (bound > 0)
+        STAGE4_ERROR(symbol, symbol, "a bounded STRING is not supported in IL.");
 
       bool type_is_complex = false;
       if (fb_symbol == NULL) {

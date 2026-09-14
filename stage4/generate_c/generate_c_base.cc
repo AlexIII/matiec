@@ -432,57 +432,16 @@ class generate_c_base_c: public iterator_visitor_c {
       return print_token(symbol);
     }
 
-    void *visit(single_byte_character_string_c *symbol) {
-      std::string str = "";
-      unsigned int count = 0; 
-      str += '"';
-      /* we ignore the first and last bytes, they will be the character ' */
-      for (unsigned int i = 1; i < strlen(symbol->value) - 1; i++) {
-        char c = symbol->value[i];
-        if ((c == '\\') || (c == '"'))
-          {str += '\\'; str += c; count ++; continue;}
-        if (c != '$')
-          {str += c; count++; continue;}
-        /* this should be safe, since the code has passed the syntax parser!! */
-        c = symbol->value[++i];
-        switch (c) {
-          case '$':
-          case '\'':
-            {str += c; count++; continue;}
-          case 'L':
-          case 'l':
-            {str += "\x0A"; /* LF */; count++; continue;}
-          case 'N':
-          case 'n':
-            {str += "\\x0A"; /* NL */; count++; continue;}
-          case 'P':
-          case 'p':
-            {str += "\\f"; /* FF */; count++; continue;}
-          case 'R':
-          case 'r':
-            {str += "\\r"; /* CR */; count++; continue;}
-          case 'T':
-          case 't':
-            {str += "\\t"; /* tab */; count++; continue;}
-          default: {
-            if (isxdigit(c)) {
-              /* this should be safe, since the code has passed the syntax parser!! */
-              char c2 = symbol->value[++i];
-              if (isxdigit(c2)) {
-                str += '\\'; str += 'x'; str += c; str += c2;
-                count++; continue;
-              }
-            }
-          }
-          /* otherwise we have an invalid string!! */
-          /* This should not have got through the syntax parser! */
-          ERROR;
-        } /* switch() */
-      } /* for() */
+    /* Decode an ST string literal into its C spelling; returns the decoded length. */
+    unsigned int decode_string_literal(single_byte_character_string_c *symbol, std::string &str) {
+      return ::decode_string_literal(symbol->value, &str);
+    }
 
-      str += '"';
+    void *visit(single_byte_character_string_c *symbol) {
+      std::string str;
+      unsigned int count = decode_string_literal(symbol, str);
       s4o.print("__STRING_LITERAL(");
-      s4o.print(count); 
+      s4o.print(count);
       s4o.print(",");
       s4o.print(str);
       s4o.print(")");
@@ -635,6 +594,10 @@ void *visit(date_and_time_c *symbol) {
     void *visit(dword_type_name_c *symbol)       {s4o.print("DWORD");       return NULL;}
     void *visit(string_type_name_c *symbol)      {s4o.print("STRING");      return NULL;}
     void *visit(wstring_type_name_c *symbol)     {s4o.print("WSTRING");     return NULL;}
+
+    /* STRING '[' integer ']' -- the per-width type declared by __DECLARE_STRING_TYPE(n) */
+    void *visit(single_byte_string_spec_c *symbol)           {return symbol->string_spec->accept(*this);}
+    void *visit(single_byte_limited_len_string_spec_c *symbol){s4o.print("__STRING_"); s4o.print(string_bound_of(symbol)); return NULL;}
 
     void *visit(safetime_type_name_c *symbol)    {s4o.print("TIME");    return NULL;}
     void *visit(safebool_type_name_c *symbol)    {s4o.print("BOOL");    return NULL;}

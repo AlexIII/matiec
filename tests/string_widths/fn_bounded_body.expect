@@ -1,0 +1,2 @@
+__string_narrow_10(&B, S);
+__string_narrow_10(&MAKE_REC.F, __string_widen_10(B));
