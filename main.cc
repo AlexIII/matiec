@@ -84,8 +84,8 @@
 #include "main.hh"
 
 
-#ifndef HGVERSION
-   #define HGVERSION ""
+#ifndef GITVERSION
+   #define GITVERSION ""
 #endif
 
 
@@ -171,7 +171,7 @@ int main(int argc, char **argv) {
       printusage(argv[0]);
       return 0;
     case 'v':
-      fprintf(stdout, "%s version %s\n" "changeset id: %s\n", PACKAGE_NAME, PACKAGE_VERSION, HGVERSION);      
+      fprintf(stdout, "%s version %s\n" "commit: %s\n", PACKAGE_NAME, PACKAGE_VERSION, GITVERSION);
       return 0;
     case 'l': runtime_options.relaxed_datatype_model   = true;  break;
     case 'p': runtime_options.pre_parsing              = true;  break;

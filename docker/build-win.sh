@@ -7,13 +7,16 @@ set -eu
 HOST=i686-w64-mingw32
 TREE=/work/build
 
+# captured before the .git-excluding tar copy below
+GITVERSION=$(git -C /src rev-parse --short HEAD 2> /dev/null || true)
+
 rm -rf "$TREE"
 mkdir -p "$TREE" /out
 
 tar -C /src -cf - \
     --exclude=./.git \
     --exclude=./docker \
-    --exclude=./dist-win \
+    --exclude=./dist \
     --exclude=./iec2c \
     --exclude=./iec2iec \
     --exclude='*.o' \
@@ -29,7 +32,7 @@ find . -name Makefile -type f -delete
 
 autoreconf -i
 ./configure --host="$HOST" LDFLAGS="-static"
-make -j"$(nproc)"
+make -j"$(nproc)" GITVERSION="$GITVERSION"
 
 "$HOST-strip" iec2c.exe
 cp iec2c.exe /out/iec2c.exe

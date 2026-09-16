@@ -1,1 +1,4 @@
 *.sh text eol=lf
+configure.ac text eol=lf
+Makefile.am text eol=lf
+**/Makefile.am text eol=lf

@@ -22,24 +22,41 @@ $ make
 
 3) Cross-Compiling for Windows with Docker
 ------------------------------------------
-Builds a static 32-bit iec2c.exe into ./dist-win/. Run from the matiec root.
+Builds a static 32-bit iec2c.exe into ./dist/. Run from the matiec root.
 
-PowerShell : docker build -t matiec-mingw docker; docker run --rm -v "${PWD}:/src" -v "${PWD}/dist-win:/out" matiec-mingw
-Linux/macOS: docker build -t matiec-mingw docker && docker run --rm -v "$PWD:/src" -v "$PWD/dist-win:/out" matiec-mingw
+PowerShell : docker build -t matiec-mingw docker; docker run --rm -v "${PWD}:/src" -v "${PWD}/dist:/out" matiec-mingw
+Linux/macOS: docker build -t matiec-mingw docker && docker run --rm -v "$PWD:/src" -v "$PWD/dist:/out" matiec-mingw
 Git Bash   : as Linux, but prefix the 'docker run' with MSYS_NO_PATHCONV=1
 
-The image build is only needed once. Sources are copied into the container,
-so a native build in the same tree keeps its Makefile and object files.
+The image build is only needed once. Sources are copied into the container and
+built there, so this never touches your working tree except for ./dist/ --
+safe to re-run any time, from any state.
 
-4) Native Linux build with Docker (fast iteration)
---------------------------------------------------
-Builds ./iec2c in place, in the same image as (3). Run from the matiec root.
+4) Native Linux build with Docker
+----------------------------------
+Builds iec2c into ./dist/, in the same image as (3), same copy-then-build
+approach. Run from the matiec root.
 
 PowerShell : docker run --rm -v "${PWD}:/src" -w /src --entrypoint sh matiec-mingw /src/docker/build-native.sh
 Git Bash   : MSYS_NO_PATHCONV=1 docker run --rm -v "$(pwd -W):/src" -w /src --entrypoint sh matiec-mingw /src/docker/build-native.sh
 
 The bounded-string fixtures are run the same way:
   ... --entrypoint sh matiec-mingw /src/tests/string_widths/run.sh
+
+
+5) Both binaries in one command (Windows PowerShell)
+-----------------------------------------------------
+Rebuilds from scratch every time -- safe to re-run unconditionally.
+
+docker build -t matiec-mingw docker; if ($?) { docker run --rm -v "${PWD}:/src" -v "${PWD}/dist:/out" matiec-mingw }; if ($?) { docker run --rm -v "${PWD}:/src" -w /src --entrypoint sh matiec-mingw /src/docker/build-native.sh }
+
+Produces dist\iec2c.exe and dist\iec2c.
+
+
+Releasing
+=========
+-> Bump the version reported by `iec2c -v` / `iec2iec -v`: edit the top-level
+   VERSION file (e.g. 0.1-alexiii.1 -> 0.1-alexiii.2).
 
 
 Maintaining the Build Environment

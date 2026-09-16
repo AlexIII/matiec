@@ -2,7 +2,8 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.61])
-AC_INIT([matiec], [0.1], [msousa@fe.up.pt, beremiz-devel@lists.sourceforge.net])
+m4_define([matiec_version], m4_esyscmd([tr -d ' \t\n\r' < VERSION]))
+AC_INIT([matiec], [matiec_version], [msousa@fe.up.pt, beremiz-devel@lists.sourceforge.net])
 AC_CONFIG_HEADERS([config/config.h])
 AC_CONFIG_AUX_DIR(config)
 

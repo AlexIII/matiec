@@ -6,8 +6,9 @@ SUBDIRS = absyntax absyntax_utils stage1_2 stage3 stage4
 
 ACLOCAL_AMFLAGS=-I config
 
-HGVERSION= $(shell hg -R $(top_srcdir) parents --template '{node|short}' 2> /dev/null || grep node $(top_srcdir)/.hg_archival.txt 2> /dev/null || true )
-AM_CXXFLAGS += -DHGVERSION="\"${HGVERSION}\""
+# overridable: the mingw cross-build tree has no .git (see docker/build-win.sh)
+GITVERSION ?= $(shell git -C $(top_srcdir) rev-parse --short HEAD 2> /dev/null || true)
+AM_CXXFLAGS += -DGITVERSION="\"${GITVERSION}\""
 
 iec2c_LDADD = stage1_2/libstage1_2.a \
 	stage3/libstage3.a \
