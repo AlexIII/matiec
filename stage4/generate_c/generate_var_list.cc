@@ -296,6 +296,19 @@ class generate_var_list_c: protected generate_c_base_and_typeid_c {
     }
     
     void declare_variable(symbol_c *symbol) {
+      // A structure gets no row of its own; only its leaf fields are listed
+      if (search_type_symbol->current_var_type_category == search_type_symbol_c::structure_vtc) {
+        if (this->current_var_class_category != external_vcc) {
+          symbol_c *tmp_var_type = this->current_var_type_symbol;
+          SYMBOL current_name;
+          current_name.symbol = symbol;
+          current_symbol_list.push_back(current_name);
+          this->current_var_type_symbol->accept(*this);
+          current_symbol_list.pop_back();
+          this->current_var_type_symbol = tmp_var_type;
+        }
+        return;
+      }
       // Arrays and structures are not supported in debugging
       switch (search_type_symbol->current_var_type_category) {
           case search_type_symbol_c::array_vtc:
@@ -887,7 +900,11 @@ class generate_var_list_c: protected generate_c_base_and_typeid_c {
        * current_var_init_symbol private variables...
        */
       update_var_type_symbol(symbol->spec_init);
-      
+      if (dynamic_cast<single_byte_string_spec_c *>(symbol->spec_init) != NULL) {
+        update_var_type_symbol(&get_datatype_info_c::string_type_name);
+        this->current_var_type_name = symbol->spec_init;
+      }
+
       /* now to produce the c equivalent... */
       declare_variable(symbol->structure_element_name);
       
