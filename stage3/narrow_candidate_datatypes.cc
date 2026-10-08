@@ -55,6 +55,7 @@
 
 #include "narrow_candidate_datatypes.hh"
 #include "datatype_functions.hh"
+#include "../main.hh"
 #include <typeinfo>
 #include <list>
 #include <string>
@@ -76,9 +77,31 @@ narrow_candidate_datatypes_c::~narrow_candidate_datatypes_c(void) {
 }
 
 
+/* With -E: the enumerated datatype of 'symbol' if it is to be used where the integer type 'target' is wanted (NULL otherwise) */
+static symbol_c *enum_candidate_for_int(symbol_c *target, symbol_c *symbol) {
+	if (!runtime_options.enum_to_int || (NULL == target) || !get_datatype_info_c::is_ANY_INT(target))
+		return NULL;
+	if (search_in_candidate_datatype_list(target, symbol->candidate_datatypes) >= 0)
+		return NULL;
+	symbol_c *res = NULL;
+	for (unsigned int i = 0; i < symbol->candidate_datatypes.size(); i++) {
+		if (get_datatype_info_c::is_enumerated(symbol->candidate_datatypes[i])) {
+			if (NULL != res) return NULL;
+			res = symbol->candidate_datatypes[i];
+		}
+	}
+	return res;
+}
+
+
 /* Only set the symbol's desired datatype to 'datatype' if that datatype is in the candidate_datatype list */
 static void set_datatype(symbol_c *datatype, symbol_c *symbol) {
-  
+	symbol_c *enum_type = (NULL == symbol->datatype) ? enum_candidate_for_int(datatype, symbol) : NULL;
+	if (NULL != enum_type) {
+		symbol->datatype = enum_type;
+		return;
+	}
+
 	/* If we are trying to set to the undefined type, and the symbol's datatype has already been set to something else, 
 	 * we abort the compoiler as I don't think this should ever occur. 
 	 * NOTE: In order to handle JMPs to labels that come before the JMP itself, we run the narrow algorithm twice.
@@ -1702,6 +1725,9 @@ void *narrow_candidate_datatypes_c::visit(assignment_statement_c *symbol) {
 		symbol->datatype = symbol->candidate_datatypes[0];
 		symbol->l_exp->datatype = symbol->datatype;
 		symbol->r_exp->datatype = symbol->datatype;
+		symbol_c *enum_type = enum_candidate_for_int(symbol->datatype, symbol->r_exp);
+		if (NULL != enum_type)
+			symbol->r_exp->datatype = enum_type;
 	}
 	/* give the chance of any expressions inside array subscripts to be narrowed correctly */
 	symbol->l_exp->accept(*this);

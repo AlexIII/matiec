@@ -55,6 +55,7 @@ typedef struct {
 	
    /* options specific to stage3 */
 	bool relaxed_datatype_model;   /* Use the relaxed datatype equivalence model, instead of the default strict equivalence model */
+	bool enum_to_int;              /* Allow implicit conversion of an enumerated value to an integer (in assignments and in function block parameters) */
 } runtime_options_t;
 
 extern runtime_options_t runtime_options;

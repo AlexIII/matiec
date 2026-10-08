@@ -2363,6 +2363,8 @@ void *fill_candidate_datatypes_c::visit(assignment_statement_c *symbol) {
 			right_type = symbol->r_exp->candidate_datatypes[j];
 			if (get_datatype_info_c::is_type_equal(left_type, right_type))
 				add_datatype_to_candidate_list(symbol, left_type);  // NOTE: Must use left_type, as the right_type may be the 'NULL' reference! (see comment in visit(ref_value_null_literal_c)) */
+			else if (runtime_options.enum_to_int && get_datatype_info_c::is_ANY_INT(left_type) && get_datatype_info_c::is_enumerated(right_type))
+				add_datatype_to_candidate_list(symbol, left_type);
 		}
 	}
 	if (debug) std::cout << ":= [" << symbol->l_exp->candidate_datatypes.size() << "," << symbol->r_exp->candidate_datatypes.size() << "] ==> "  << symbol->candidate_datatypes.size() << " result.\n";

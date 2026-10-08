@@ -125,6 +125,7 @@ static void printusage(const char *cmd) {
   printf(" -b : allow functions returning VOID                 (a non-standard extension!)\n");
   printf(" -e : disable generation of implicit EN and ENO parameters.\n");
   printf(" -c : create conversion functions for enumerated data types\n");
+  printf(" -E : allow implicit conversion of enumerated values to integers (a non-standard extension!)\n");
   printf(" -O : options for output (code generation) stage. Available options for %s are...\n", cmd);
   runtime_options.allow_missing_var_in    = false; /* disable: allow definition and invocation of POUs with no input, output and in_out parameters! */
   stage4_print_options();
@@ -161,11 +162,12 @@ int main(int argc, char **argv) {
 
   /* Default values for the command line options... */
   runtime_options.relaxed_datatype_model    = false; /* by default use the strict datatype equivalence model */
+  runtime_options.enum_to_int               = false; /* disable: allow implicit conversion of enumerated values to integers */
   
   /******************************************/
   /*   Parse command line options...        */
   /******************************************/
-  while ((optres = getopt(argc, argv, ":nehvfplsrRabicI:T:O:")) != -1) {
+  while ((optres = getopt(argc, argv, ":nehvfplsrRabicEI:T:O:")) != -1) {
     switch(optres) {
     case 'h':
       printusage(argv[0]);
@@ -174,6 +176,7 @@ int main(int argc, char **argv) {
       fprintf(stdout, "%s version %s\n" "commit: %s\n", PACKAGE_NAME, PACKAGE_VERSION, GITVERSION);
       return 0;
     case 'l': runtime_options.relaxed_datatype_model   = true;  break;
+    case 'E': runtime_options.enum_to_int              = true;  break;
     case 'p': runtime_options.pre_parsing              = true;  break;
     case 'f': runtime_options.full_token_loc           = true;  break;
     case 's': runtime_options.safe_extensions          = true;  break;
