@@ -77,17 +77,23 @@ narrow_candidate_datatypes_c::~narrow_candidate_datatypes_c(void) {
 }
 
 
-/* With -E: the enumerated datatype of 'symbol' if it is to be used where the integer type 'target' is wanted (NULL otherwise) */
-static symbol_c *enum_candidate_for_int(symbol_c *target, symbol_c *symbol) {
-	if (!runtime_options.enum_to_int || (NULL == target) || !get_datatype_info_c::is_ANY_INT(target))
+/* With -X_ENUM_TO_INT/-X_INT_TO_REAL: the candidate datatype of 'symbol' that is to be implicitly converted to the wanted datatype 'target' (NULL if none, or ambiguous).
+ * enum -> integer, and integer -> REAL/LREAL.
+ */
+static symbol_c *implicit_conversion_candidate(symbol_c *target, symbol_c *symbol) {
+	if (NULL == target) return NULL;
+	bool to_int  = runtime_options.x_enum_to_int && get_datatype_info_c::is_ANY_INT (target);
+	bool to_real = runtime_options.x_int_to_real && get_datatype_info_c::is_ANY_REAL(target);
+	if (!to_int && !to_real)
 		return NULL;
 	if (search_in_candidate_datatype_list(target, symbol->candidate_datatypes) >= 0)
 		return NULL;
 	symbol_c *res = NULL;
 	for (unsigned int i = 0; i < symbol->candidate_datatypes.size(); i++) {
-		if (get_datatype_info_c::is_enumerated(symbol->candidate_datatypes[i])) {
+		symbol_c *type = symbol->candidate_datatypes[i];
+		if ((to_int && get_datatype_info_c::is_enumerated(type)) || (to_real && is_implicit_int_to_real_source(type))) {
 			if (NULL != res) return NULL;
-			res = symbol->candidate_datatypes[i];
+			res = type;
 		}
 	}
 	return res;
@@ -96,7 +102,7 @@ static symbol_c *enum_candidate_for_int(symbol_c *target, symbol_c *symbol) {
 
 /* Only set the symbol's desired datatype to 'datatype' if that datatype is in the candidate_datatype list */
 static void set_datatype(symbol_c *datatype, symbol_c *symbol) {
-	symbol_c *enum_type = (NULL == symbol->datatype) ? enum_candidate_for_int(datatype, symbol) : NULL;
+	symbol_c *enum_type = (NULL == symbol->datatype) ? implicit_conversion_candidate(datatype, symbol) : NULL;
 	if (NULL != enum_type) {
 		symbol->datatype = enum_type;
 		return;
@@ -1725,7 +1731,7 @@ void *narrow_candidate_datatypes_c::visit(assignment_statement_c *symbol) {
 		symbol->datatype = symbol->candidate_datatypes[0];
 		symbol->l_exp->datatype = symbol->datatype;
 		symbol->r_exp->datatype = symbol->datatype;
-		symbol_c *enum_type = enum_candidate_for_int(symbol->datatype, symbol->r_exp);
+		symbol_c *enum_type = implicit_conversion_candidate(symbol->datatype, symbol->r_exp);
 		if (NULL != enum_type)
 			symbol->r_exp->datatype = enum_type;
 	}

@@ -79,6 +79,9 @@ extern const struct widen_entry widen_CMP_table[];
  */
 int search_in_candidate_datatype_list(symbol_c *datatype, const std::vector <symbol_c *> &candidate_datatypes);
 
+/* With -X_INT_TO_REAL: true if values of the integer datatype may implicitly be converted to REAL/LREAL (2 bytes or less). */
+bool is_implicit_int_to_real_source(symbol_c *int_type);
+
 /* Remove a datatype inside a candidate_datatypes list.
  * Returns: If successful it returns true, false otherwise.
  */

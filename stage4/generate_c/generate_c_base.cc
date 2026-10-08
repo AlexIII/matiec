@@ -384,7 +384,11 @@ class generate_c_base_c: public iterator_visitor_c {
 /* B 1.2.1 - Numeric Literals */
 /******************************/
     void *visit(real_c *symbol) {return print_striped_token(symbol);}
-    void *visit(integer_c *symbol) {return print_striped_token(symbol);}
+    void *visit(integer_c *symbol) {
+      print_striped_token(symbol);
+      if (get_datatype_info_c::is_ANY_REAL_compatible(symbol->datatype)) s4o.print(".0");
+      return NULL;
+    }
     void *visit(binary_integer_c *symbol) {return print_striped_binary_token(symbol, 2);}
     void *visit(octal_integer_c *symbol) {s4o.print("0"); return print_striped_token(symbol, 2);}
     void *visit(hex_integer_c *symbol) {s4o.print("0x"); return print_striped_token(symbol, 3);}
@@ -398,6 +402,7 @@ class generate_c_base_c: public iterator_visitor_c {
     void *visit(neg_integer_c *symbol) {
       s4o.print("-");
       symbol->exp->accept(*this);
+      if (get_datatype_info_c::is_ANY_REAL_compatible(symbol->datatype) && !get_datatype_info_c::is_ANY_REAL_compatible(symbol->exp->datatype)) s4o.print(".0");
       return NULL;
     }
 

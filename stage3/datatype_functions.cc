@@ -396,6 +396,10 @@ int search_in_candidate_datatype_list(symbol_c *datatype, const std::vector <sym
 	return -1;
 }
 
+bool is_implicit_int_to_real_source(symbol_c *int_type) {
+	return get_datatype_info_c::is_ANY_INT(int_type) && (get_sizeof_datatype_c::getsize(int_type) <= 16);
+}
+
 /* Remove a datatype inside a candidate_datatypes list.
  * Returns: If successful it returns true, false otherwise.
  */

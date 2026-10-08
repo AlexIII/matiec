@@ -300,6 +300,7 @@ fill_candidate_datatypes_c::fill_candidate_datatypes_c(symbol_c *ignore) {
 	search_var_instance_decl = NULL;
 	current_enumerated_spec_type = NULL;
 	current_scope = NULL;
+	relaxed_param_match = false;
 }
 
 fill_candidate_datatypes_c::~fill_candidate_datatypes_c(void) {
@@ -391,6 +392,20 @@ void fill_candidate_datatypes_c::remove_incompatible_datatypes(symbol_c *symbol)
 }
     
 
+/* With -X_ENUM_TO_INT/-X_INT_TO_REAL: true if a value of datatype 'from' may implicitly be used where the datatype 'to' is wanted (enum -> integer, integer -> REAL) */
+static bool is_implicit_conversion(symbol_c *to, symbol_c *from) {
+	if (runtime_options.x_enum_to_int && get_datatype_info_c::is_ANY_INT (to) && get_datatype_info_c::is_enumerated(from)) return true;
+	if (runtime_options.x_int_to_real && get_datatype_info_c::is_ANY_REAL(to) && is_implicit_int_to_real_source(from)) return true;
+	return false;
+}
+
+static bool has_implicit_conversion(symbol_c *to, symbol_c *value) {
+	for (unsigned int i = 0; i < value->candidate_datatypes.size(); i++)
+		if (is_implicit_conversion(to, value->candidate_datatypes[i])) return true;
+	return false;
+}
+
+
 /* returns true if compatible function/FB invocation, otherwise returns false */
 /* Assumes that the candidate_datatype lists of all the parameters being passed haved already been filled in */
 /*
@@ -422,7 +437,8 @@ bool fill_candidate_datatypes_c::match_nonformal_call(symbol_c *f_call, symbol_c
 		
 		/* check whether one of the candidate_data_types of the value being passed is the same as the param_type */
 		if (search_in_candidate_datatype_list(param_datatype, call_param_value->candidate_datatypes) < 0)
-			return false; /* return false if param_type not in the list! */
+			if (!(relaxed_param_match && has_implicit_conversion(param_datatype, call_param_value)))
+				return false; /* return false if param_type not in the list! */
 	}
 	/* call is compatible! */
 	return true;
@@ -481,7 +497,8 @@ bool fill_candidate_datatypes_c::match_formal_call(symbol_c *f_call, symbol_c *f
 		
 		/* check whether one of the candidate_data_types of the value being passed is the same as the param_type */
 		if (search_in_candidate_datatype_list(param_datatype, call_param_types) < 0)
-			return false; /* return false if param_type not in the list! */
+			if (!(relaxed_param_match && has_implicit_conversion(param_datatype, call_param_value)))
+				return false; /* return false if param_type not in the list! */
 		
 		/* If this is the first parameter, then copy the datatype to *first_param_datatype */
 		if (is_first_param)
@@ -555,6 +572,7 @@ void fill_candidate_datatypes_c::handle_function_call(symbol_c *fcall, generic_f
 			fcall_data.candidate_functions.push_back(f_decl);
 		
 	}
+	bool any_compatible = false;
 	for(; lower != upper; lower++) {
 		bool compatible = false;
 		
@@ -563,6 +581,7 @@ void fill_candidate_datatypes_c::handle_function_call(symbol_c *fcall, generic_f
 		if (NULL != fcall_data.nonformal_operand_list) compatible=match_nonformal_call(fcall, f_decl);
 		if (NULL != fcall_data.   formal_operand_list) compatible=   match_formal_call(fcall, f_decl);
 		if (compatible) {
+			any_compatible = true;
 			/* Add the data type returned by the called functions. 
 			 * However, only do this if this data type is not already present in the candidate_datatypes list_c
 			 */
@@ -571,6 +590,20 @@ void fill_candidate_datatypes_c::handle_function_call(symbol_c *fcall, generic_f
 				/* we only add it to the function declaration list if this entry was not already present in the candidate datatype list! */
 				fcall_data.candidate_functions.push_back(f_decl);
 		}
+	}
+	/* With -X_ENUM_TO_INT/-X_INT_TO_REAL: only when no declaration matched exactly, retry accepting implicitly convertible values */
+	if (!any_compatible && (runtime_options.x_enum_to_int || runtime_options.x_int_to_real)) {
+		relaxed_param_match = true;
+		for(lower = function_symtable.lower_bound(fcall_data.function_name); lower != upper; lower++) {
+			f_decl = function_symtable.get_value(lower);
+			bool compatible = false;
+			if (NULL != fcall_data.nonformal_operand_list) compatible=match_nonformal_call(fcall, f_decl);
+			if (NULL != fcall_data.   formal_operand_list) compatible=   match_formal_call(fcall, f_decl);
+			if (compatible)
+				if (add_datatype_to_candidate_list(fcall, base_type(f_decl->type_name)))
+					fcall_data.candidate_functions.push_back(f_decl);
+		}
+		relaxed_param_match = false;
 	}
 	if (debug) std::cout << "end_function() [" << fcall->candidate_datatypes.size() << "] result.\n";
 	return;
@@ -819,6 +852,14 @@ void *fill_candidate_datatypes_c::handle_any_integer(symbol_c *symbol) {
 
 
 
+/* With -X_INT_TO_REAL: a decimal integer literal may also be used as a REAL/LREAL. Added after the integer types, so these keep priority. */
+void fill_candidate_datatypes_c::add_int_literal_real_candidates(symbol_c *symbol) {
+	if (!runtime_options.x_int_to_real) return;
+	add_2datatypes_to_candidate_list(symbol, &get_datatype_info_c::real_type_name,  &get_datatype_info_c::safereal_type_name);
+	add_2datatypes_to_candidate_list(symbol, &get_datatype_info_c::lreal_type_name, &get_datatype_info_c::safelreal_type_name);
+}
+
+
 void *fill_candidate_datatypes_c::handle_any_real(symbol_c *symbol) {
 	add_2datatypes_to_candidate_list(symbol, &get_datatype_info_c::real_type_name,  &get_datatype_info_c::safereal_type_name);
 	add_2datatypes_to_candidate_list(symbol, &get_datatype_info_c::lreal_type_name, &get_datatype_info_c::safelreal_type_name);
@@ -852,13 +893,18 @@ void *fill_candidate_datatypes_c::visit(neg_integer_c *symbol) {
 	add_2datatypes_to_candidate_list(symbol, &get_datatype_info_c::dint_type_name, &get_datatype_info_c::safedint_type_name);
 	add_2datatypes_to_candidate_list(symbol, &get_datatype_info_c::lint_type_name, &get_datatype_info_c::safelint_type_name);
 	remove_incompatible_datatypes(symbol);
+	add_int_literal_real_candidates(symbol);
 	if (debug) std::cout << "neg ANY_INT [" << symbol->candidate_datatypes.size() << "]" << std::endl;
 	return NULL;
 }
 
 
 
-void *fill_candidate_datatypes_c::visit(integer_c        *symbol) {return handle_any_integer(symbol);}
+void *fill_candidate_datatypes_c::visit(integer_c        *symbol) {
+	handle_any_integer(symbol);
+	add_int_literal_real_candidates(symbol);
+	return NULL;
+}
 void *fill_candidate_datatypes_c::visit(binary_integer_c *symbol) {return handle_any_integer(symbol);}
 void *fill_candidate_datatypes_c::visit(octal_integer_c  *symbol) {return handle_any_integer(symbol);}
 void *fill_candidate_datatypes_c::visit(hex_integer_c    *symbol) {return handle_any_integer(symbol);}
@@ -2363,7 +2409,7 @@ void *fill_candidate_datatypes_c::visit(assignment_statement_c *symbol) {
 			right_type = symbol->r_exp->candidate_datatypes[j];
 			if (get_datatype_info_c::is_type_equal(left_type, right_type))
 				add_datatype_to_candidate_list(symbol, left_type);  // NOTE: Must use left_type, as the right_type may be the 'NULL' reference! (see comment in visit(ref_value_null_literal_c)) */
-			else if (runtime_options.enum_to_int && get_datatype_info_c::is_ANY_INT(left_type) && get_datatype_info_c::is_enumerated(right_type))
+			else if (is_implicit_conversion(left_type, right_type))
 				add_datatype_to_candidate_list(symbol, left_type);
 		}
 	}

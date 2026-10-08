@@ -88,6 +88,7 @@ class fill_candidate_datatypes_c: public iterator_visitor_c {
 
     /* Match a function declaration with a function call through their parameters.*/
     /* returns true if compatible function/FB invocation, otherwise returns false */
+    bool relaxed_param_match;  /* with -X_ENUM_TO_INT/-X_INT_TO_REAL: match_*_call() also accept values that are implicitly convertible to the parameter type */
     bool  match_nonformal_call(symbol_c *f_call, symbol_c *f_decl);
     bool  match_formal_call   (symbol_c *f_call, symbol_c *f_decl, symbol_c **first_param_datatype = NULL);
     void  handle_function_call(symbol_c *fcall, generic_function_call_t fcall_data);
@@ -144,6 +145,7 @@ class fill_candidate_datatypes_c: public iterator_visitor_c {
     /* B 1.2.1 - Numeric Literals */
     /******************************/
     void *handle_any_integer(symbol_c *symbol);
+    void add_int_literal_real_candidates(symbol_c *symbol);
     void *handle_any_real   (symbol_c *symbol);
     void *handle_any_literal(symbol_c *symbol, symbol_c *symbol_value, symbol_c *symbol_type);
     
