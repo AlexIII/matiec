@@ -1,3 +1,55 @@
+  THIS REPOSITORY IS A FORK OF MATIEC
+
+ This is a fork of beremiz/matiec (https://github.com/beremiz/matiec), maintained by AlexIII.
+It lives at https://github.com/AlexIII/matiec and branches from upstream beremiz/default at commit 97d311d.
+The version is kept in the VERSION file (e.g. 0.1-alexiii.2); "iec2c -v" prints the version and the git commit.
+To build, see README.build (Docker builds for Windows and Linux). The original upstream readme follows the
+separator below.
+
+ What this fork adds over upstream:
+
+ New features / language extensions (all off by default, existing programs compile unchanged)
+ - STRING[n]: per-variable, function block field and struct field string widths (storage of n+1 bytes
+   instead of 127); out-of-range widths and unsupported contexts are diagnosed (bb7f7ff)
+ - -X_ENUM_TO_INT: implicit enumerated value to integer conversion in assignments, FB inputs and
+   function parameters (b55621b, 25a58a8)
+ - -X_INT_TO_REAL: implicit integer to REAL/LREAL conversion for decimal literals and integer variables of
+   2 bytes or less; REAL-typed literals are emitted as x.0 in C (25a58a8)
+ - VARIABLES.csv: struct-typed variables are listed as one row per leaf field with the full dotted path,
+   including bounded STRING[n] fields (46fc1bc)
+
+ Bug fixes
+ - Accept bytes 0x80-0xFF in ST string literals; string literal length is now taken from sizeof() so it
+   matches the emitted bytes (df5a8b1)
+ - Fix C code generation for array function parameters (e8824e4)
+ - Fix segfault in VARIABLES.csv generation for comma-listed FB instances and structs ("a, b, c : TON") (ca5022b)
+ - Fix gcc warning (misleading indentation) in the IL function call generator (642596a)
+ - Fix missing semicolon in AnnexF/delay_st.txt (cbe6ad5)
+ - Runtime: __iec_error() now calls exit(0x102) instead of printing to stderr (03de001)
+
+ Fixes cherry-picked from other forks/authors
+ - Struct initializer bound to the wrong member: find_element() used an ordering functor as an equality test
+   (Edouard Tisserant, beremiz c1df93e; 5a78964)
+ - RETAIN qualifier lost after the first global in a VAR_GLOBAL RETAIN block (Edouard Tisserant, beremiz
+   12e4828; ba0f857)
+ - Crash when an enum value is used in a struct/array initializer (Edouard Tisserant, beremiz f7185c6; 6401fa9)
+ - Initialization of arrays of non-simple types, required by the fix below (Edouard Tisserant, beremiz
+   5b9968b; c1ffc9a)
+ - Internal compiler error when an array initializer has too many elements; now a stage 3 error (Edouard
+   Tisserant, beremiz c73c55d; a24363d)
+ - F_TRIG first-cycle output: internal memory initialised to TRUE so Q is not spuriously set; also applied to
+   the no_ENENO variant (Thiago Alves, thiagoralves/matiec f-trigger-fix, b082b44 and b3df950; 11b2208, 89e5558)
+
+ Build & tooling
+ - Version comes from the VERSION file; -v prints version and git commit (replaces the Mercurial changeset id) (42931eb)
+ - Docker builds: Windows cross-compile (iec2c.exe) and native Linux (iec2c) into ./dist/ (fba496a, 42931eb, eb395d9)
+ - Regression tests: tests/upstream_fixes, tests/var_list, tests/string_widths (84f36c9, 76cf5ed, 46fc1bc,
+   ca5022b, bb7f7ff)
+ - Documentation: UPSTREAM_MERGE_NOTES.md (upstream commits reviewed and merged), KNOWN_ISSUES.md
+   (1a649a7, 54b4ec1, b7e7732)
+
+----------------------------------------------------------------------------------------------------
+
 
 
 
