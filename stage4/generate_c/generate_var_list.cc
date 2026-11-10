@@ -300,12 +300,16 @@ class generate_var_list_c: protected generate_c_base_and_typeid_c {
       if (search_type_symbol->current_var_type_category == search_type_symbol_c::structure_vtc) {
         if (this->current_var_class_category != external_vcc) {
           symbol_c *tmp_var_type = this->current_var_type_symbol;
+          symbol_c *tmp_var_type_name = this->current_var_type_name;
+          search_type_symbol_c::vartypecategory_t tmp_var_type_category = search_type_symbol->current_var_type_category;
           SYMBOL current_name;
           current_name.symbol = symbol;
           current_symbol_list.push_back(current_name);
           this->current_var_type_symbol->accept(*this);
           current_symbol_list.pop_back();
           this->current_var_type_symbol = tmp_var_type;
+          this->current_var_type_name = tmp_var_type_name;
+          search_type_symbol->current_var_type_category = tmp_var_type_category;
         }
         return;
       }
@@ -369,10 +373,15 @@ class generate_var_list_c: protected generate_c_base_and_typeid_c {
               current_name = new SYMBOL;
               current_name->symbol = symbol;
               tmp_var_type = this->current_var_type_symbol;
+              // the nested walk overwrites these; the next name in an "a, b, c : FB" list needs them intact
+              symbol_c *tmp_var_type_name = this->current_var_type_name;
+              search_type_symbol_c::vartypecategory_t tmp_var_type_category = search_type_symbol->current_var_type_category;
               current_symbol_list.push_back(*current_name);
               this->current_var_type_symbol->accept(*this);
               current_symbol_list.pop_back();
               this->current_var_type_symbol = tmp_var_type;
+              this->current_var_type_name = tmp_var_type_name;
+              search_type_symbol->current_var_type_category = tmp_var_type_category;
           }
           break;
         case search_type_symbol_c::array_vtc:

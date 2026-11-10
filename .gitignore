@@ -16,3 +16,4 @@ stage1_2/*.hh
 dist/
 tests/upstream_fixes/out/
 tests/string_widths/out/
+tests/var_list/out/
