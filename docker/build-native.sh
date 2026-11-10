@@ -23,6 +23,10 @@ tar -C /src -cf - \
 
 cd "$TREE"
 
+# Discard configure state produced by a host build; everything is regenerated.
+rm -rf config.status config.log autom4te.cache
+find . -name Makefile -type f -delete
+
 autoreconf -i
 ./configure
 make -j"$(nproc)" GITVERSION="$GITVERSION"
